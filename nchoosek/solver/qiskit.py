@@ -27,23 +27,23 @@ class QiskitResult(solver.Result):
             ret["Qiskit backend"] = self.sampler.backend
         except AttributeError:
             ret["Qiskit backend"] = 'unknown %s backend' % repr(self.sampler)
-        ret["circuit depth"] = self.depth
-        ret["total number of shots"] = self.total_shots
-        ret["final number of shots"] = self.final_shots
-        ret["number of jobs"] = self.num_jobs
-        ret["samples"] = self.samples
-        ret["job tags"] = self.job_tags
+        # ret["circuit depth"] = self.depth
+        # ret["total number of shots"] = self.total_shots
+        # ret["final number of shots"] = self.final_shots
+        # ret["number of jobs"] = self.num_jobs
+        # ret["samples"] = self.samples
+        # ret["job tags"] = self.job_tags
         return 'nchoosek.solver.Result(%s)' % str(ret)
 
     def __str__(self):
         ret = self._str_dict()
         ret["Qiskit backend"] = self._get_backend_name() or "[unknown]"
-        ret["circuit depth"] = self.depth
-        ret["total number of shots"] = self.total_shots
-        ret["final number of shots"] = self.final_shots
-        ret["number of jobs"] = self.num_jobs
-        ret["number of unique samples"] = len(self.samples)
-        ret["job tags"] = self.job_tags
+        # ret["circuit depth"] = self.depth
+        # ret["total number of shots"] = self.total_shots
+        # ret["final number of shots"] = self.final_shots
+        # ret["number of jobs"] = self.num_jobs
+        # ret["number of unique samples"] = len(self.samples)
+        # ret["job tags"] = self.job_tags
         return str(ret)
 
     def _get_backend_name(self):
@@ -97,10 +97,13 @@ def solve(env, backend=None, hard_scale=None, optimizer=COBYLA(),
           reps=1, initial_point=None, callback=None):
     'Solve an NchooseK problem, returning a QiskitResult.'
     # Acquire a BackendSampler from the backend parameter and a list
-    # of job tags.
+    # of job tags. 
+
+    print(backend)
     job_tags = ['NchooseK', 'nchoosek-%010x' % random.randrange(16**10)]
     sampler = _construct_backendsampler(backend, job_tags)
 
+    print("sampler is ", sampler.backend)
     # Convert the environment to a QUBO.
     qtime1 = datetime.datetime.now()
     qubo = construct_qubo(env, hard_scale)
@@ -112,10 +115,13 @@ def solve(env, backend=None, hard_scale=None, optimizer=COBYLA(),
         prog.binary_var(var)
     prog.minimize(quadratic=qubo)
 
+    # print("qp is", prog)
+
     # Keep track of the number of shots and jobs.
     final_shots = 0   # Shots in final job; used for computing tallies
     total_shots = 0   # Total shots across all jobs
     num_jobs = 0      # Number of jobs submitted
+    # print("num jobs is ", num_jobs)
 
     # Wrap the user's callback with one that records the final number
     # of shots.
@@ -132,7 +138,10 @@ def solve(env, backend=None, hard_scale=None, optimizer=COBYLA(),
     stime1 = datetime.datetime.now()
     qaoa = QAOA(sampler=sampler, optimizer=optimizer, reps=reps,
                 initial_point=initial_point, callback=callback_wrapper)
+    
+    print("qaoa circuit is ", qaoa.ansatz)
     alg = MinimumEigenOptimizer(qaoa)
+    # print("alg is ", alg)
     result = alg.solve(prog)
 
     stime2 = datetime.datetime.now()
@@ -144,7 +153,7 @@ def solve(env, backend=None, hard_scale=None, optimizer=COBYLA(),
         ret.solutions.append({vars[i].name: x != 0
                               for i, x in enumerate(samp.x)
                               if vars[i].name in env.ports()})
-
+    print("ret is ", ret)
     # Record this time now to ensure that the QAOA is done running first.
     ret.qubo_times = (qtime1, qtime2)
     ret.solver_times = (stime1, stime2)
